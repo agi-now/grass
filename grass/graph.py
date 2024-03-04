@@ -8,15 +8,16 @@ from typing import Hashable, Optional
 class AssociativeGraph:
     def __init__(self, edges: list[tuple[Hashable, Hashable, float]], bidirectional: bool = True):
         self.bidirectional = bidirectional
+        self._decay_factor = 1
         
         self.priority_queues = defaultdict(list)
         for start, end, weight in edges:
             self.add_edge(start, end, weight)
             
     def add_edge(self, start: Hashable, end: Hashable, weight: float):
-        bisect.insort(self.priority_queues[start], (-weight, end))
+        bisect.insort(self.priority_queues[start], (-weight * self._decay_factor, end))
         if self.bidirectional:
-            bisect.insort(self.priority_queues[end], (-weight, start))
+            bisect.insort(self.priority_queues[end], (-weight * self._decay_factor, start))
         
     def lookup(self, *nodes, weights: Optional[list[float]] = None, depth: int = 100):
         if weights is None:
@@ -32,7 +33,7 @@ class AssociativeGraph:
                     break
                 
         return [
-            (x[0], round(x[1], 3))
+            (x[0], round(x[1] / self._decay_factor, 3))
             for x in sorted(result.items(), key=lambda x: x[1], reverse=True)[:10]
             if x[0] not in nodes
         ]
@@ -53,7 +54,7 @@ class AssociativeGraph:
     def update_edge(self, start: Hashable, end: Hashable, weight: float):
         self.remove_edge(start, end)
         if weight != 0:
-            self.add_edge(start, end, weight)
+            self.add_edge(start, end, weight * self._decay_factor)
     
     def remove_node(self, node: Hashable):
         """ Removes the node from the graph. 
@@ -66,13 +67,20 @@ class AssociativeGraph:
 
     def _get_data_to_save(self):
         return {
+            'decay_factor': self._decay_factor,
             'bidirectional': self.bidirectional,
             'priority_queues': self.priority_queues
         }
+
+    def decay(self, factor: float):
+        self._decay_factor *= factor
+        if self._decay_factor == 0:
+            raise ValueError("Decay factor must always be greater than zero")
         
     @classmethod
     def _from_saved_data(cls, data):
         instance = cls([], bidirectional=data['bidirectional'])
+        instance.decay(data['decay_factor'])
         instance.priority_queues = data['priority_queues']
         return instance
 
