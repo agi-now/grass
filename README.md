@@ -5,6 +5,10 @@ Associations are defined as a uni- or bidirectional weighted edges between nodes
 
 ## Installation
 
+```bash
+python -m pip install git+ssh://git@github.com/agi-now/grass.git
+```
+
 ## Usage
 
 ```python
