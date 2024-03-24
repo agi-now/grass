@@ -36,8 +36,8 @@ graph.lookup('A', 'B')
 graph.lookup('A', 'B', weights=[2, 1])
 
 # Modify the graph
-graph.add_edge('A', 'E', 0.8)
-graph.update_edge('A', 'B', 0.5)
+graph.set_weight('A', 'E', 0.8)
+graph.set_weight('A', 'B', 0.5)
 
 # Let's see the changes reflected in the lookup
 # Returns [('E', 0.8), ('C', 0.5), ('D', 0.4)]

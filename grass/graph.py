@@ -9,11 +9,21 @@ class AssociativeGraph:
     def __init__(self, edges: list[tuple[Hashable, Hashable, float]], bidirectional: bool = True):
         self.bidirectional = bidirectional
         
+        self.connected_nodes = set()
+        
         self.priority_queues = defaultdict(list)
         for start, end, weight in edges:
-            self.add_edge(start, end, weight)
+            self.set_weight(start, end, weight)
             
-    def add_edge(self, start: Hashable, end: Hashable, weight: float):
+    def set_weight(self, start: Hashable, end: Hashable, weight: float):
+        if (start, end) in self.connected_nodes:
+            self._remove_edge(start, end)
+            
+        if weight == 0:
+            return
+            
+        self.connected_nodes.add((start, end))
+        
         bisect.insort(self.priority_queues[start], (-weight, end))
         if self.bidirectional:
             bisect.insort(self.priority_queues[end], (-weight, start))
@@ -37,7 +47,7 @@ class AssociativeGraph:
             if x[0] not in nodes
         ]
         
-    def remove_edge(self, start: Hashable, end: Hashable):
+    def _remove_edge(self, start: Hashable, end: Hashable):
         self.priority_queues[start] = [
             (weight, node)
             for weight, node in self.priority_queues[start]
@@ -49,11 +59,6 @@ class AssociativeGraph:
                 for weight, node in self.priority_queues[end]
                 if node != start
             ]
-
-    def update_edge(self, start: Hashable, end: Hashable, weight: float):
-        self.remove_edge(start, end)
-        if weight != 0:
-            self.add_edge(start, end, weight)
     
     def remove_node(self, node: Hashable):
         """ Removes the node from the graph. 
@@ -67,13 +72,17 @@ class AssociativeGraph:
     def _get_data_to_save(self):
         return {
             'bidirectional': self.bidirectional,
-            'priority_queues': self.priority_queues
+            'priority_queues': self.priority_queues,
+            'connected_nodes': list(self.connected_nodes),
         }
         
     @classmethod
     def _from_saved_data(cls, data):
         instance = cls([], bidirectional=data['bidirectional'])
         instance.priority_queues = data['priority_queues']
+        instance.connected_nodes = set([
+            (start, end) for start, end in data['connected_nodes']
+        ])
         return instance
 
     def save_pkl(self, path: str):
