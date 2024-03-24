@@ -31,7 +31,7 @@ class AssociativeGraph:
         if self.bidirectional:
             bisect.insort(self.priority_queues[end], (-weight / self._decay_factor, start))
         
-    def lookup(self, *nodes, weights: Optional[list[float]] = None, depth: int = 1):
+    def lookup(self, *nodes, weights: Optional[list[float]] = None, depth: int = 1, depth_decay: float = 0.5):
         if weights is None:
             weights = [1] * len(nodes)
             
@@ -50,7 +50,7 @@ class AssociativeGraph:
                         result[associated_node] += -association_weight * input_weight
                         
                         new_nodes.append(associated_node)
-                        new_weights.append(-association_weight * input_weight)
+                        new_weights.append(-association_weight * input_weight * (1 - depth_decay))
                     except IndexError:
                         break
                         
