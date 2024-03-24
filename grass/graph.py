@@ -31,23 +31,36 @@ class AssociativeGraph:
         if self.bidirectional:
             bisect.insort(self.priority_queues[end], (-weight / self._decay_factor, start))
         
-    def lookup(self, *nodes, weights: Optional[list[float]] = None, depth: int = 100):
+    def lookup(self, *nodes, weights: Optional[list[float]] = None, depth: int = 1):
         if weights is None:
             weights = [1] * len(nodes)
+            
+        initial_nodes = set(nodes)
         
         result = defaultdict(float)
-        for node, input_weight in zip(nodes, weights):
-            for i in range(depth):
-                try:
-                    association_weight, associated_node = self.priority_queues[node][i]
-                    result[associated_node] += -association_weight * input_weight
-                except IndexError:
-                    break
         
+        for _ in range(depth):
+            new_nodes = []
+            new_weights = []
+            
+            for node, input_weight in zip(nodes, weights):
+                for i in range(100):
+                    try:
+                        association_weight, associated_node = self.priority_queues[node][i]
+                        result[associated_node] += -association_weight * input_weight
+                        
+                        new_nodes.append(associated_node)
+                        new_weights.append(-association_weight * input_weight)
+                    except IndexError:
+                        break
+                        
+            nodes = new_nodes
+            weights = new_weights
+            
         return [
             (x[0], round(x[1] - x[1] * (1 - self._decay_factor), 3))
             for x in sorted(result.items(), key=lambda x: x[1], reverse=True)[:10]
-            if x[0] not in nodes
+            if x[0] not in initial_nodes
         ]
         
     def _remove_edge(self, start: Hashable, end: Hashable):
