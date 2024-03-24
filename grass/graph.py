@@ -8,6 +8,7 @@ from typing import Hashable, Optional
 class AssociativeGraph:
     def __init__(self, edges: list[tuple[Hashable, Hashable, float]], bidirectional: bool = True):
         self.bidirectional = bidirectional
+        self._decay_factor = 1
         
         self.connected_nodes = set()
         
@@ -21,12 +22,14 @@ class AssociativeGraph:
             
         if weight == 0:
             return
-            
+        
         self.connected_nodes.add((start, end))
         
-        bisect.insort(self.priority_queues[start], (-weight, end))
+        # breakpoint()
+        
+        bisect.insort(self.priority_queues[start], (-weight / self._decay_factor, end))
         if self.bidirectional:
-            bisect.insort(self.priority_queues[end], (-weight, start))
+            bisect.insort(self.priority_queues[end], (-weight / self._decay_factor, start))
         
     def lookup(self, *nodes, weights: Optional[list[float]] = None, depth: int = 100):
         if weights is None:
@@ -40,9 +43,9 @@ class AssociativeGraph:
                     result[associated_node] += -association_weight * input_weight
                 except IndexError:
                     break
-                
+        
         return [
-            (x[0], round(x[1], 3))
+            (x[0], round(x[1] - x[1] * (1 - self._decay_factor), 3))
             for x in sorted(result.items(), key=lambda x: x[1], reverse=True)[:10]
             if x[0] not in nodes
         ]
@@ -59,7 +62,7 @@ class AssociativeGraph:
                 for weight, node in self.priority_queues[end]
                 if node != start
             ]
-    
+
     def remove_node(self, node: Hashable):
         """ Removes the node from the graph. 
         In order to remove the node we would need to iterate all priority queues,
@@ -71,14 +74,22 @@ class AssociativeGraph:
 
     def _get_data_to_save(self):
         return {
+            'decay_factor': self._decay_factor,
             'bidirectional': self.bidirectional,
             'priority_queues': self.priority_queues,
             'connected_nodes': list(self.connected_nodes),
         }
+
+    def decay(self, factor: float):
+        """ Positive factor increases the decay, negative decreases it. 
+        This is a percentage-based decay - factor 0.1 means 10% decay.
+        """
+        self._decay_factor *= 1 - factor
         
     @classmethod
     def _from_saved_data(cls, data):
         instance = cls([], bidirectional=data['bidirectional'])
+        instance.decay(data['decay_factor'])
         instance.priority_queues = data['priority_queues']
         instance.connected_nodes = set([
             (start, end) for start, end in data['connected_nodes']

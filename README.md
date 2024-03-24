@@ -5,6 +5,10 @@ Associations are defined as a uni- or bidirectional weighted edges between nodes
 
 ## Installation
 
+```bash
+python -m pip install git+ssh://git@github.com/agi-now/grass.git
+```
+
 ## Usage
 
 ```python
@@ -51,4 +55,27 @@ graph = AssociativeGraph.load_json('graph.json')
 # Save/load the graph to/from the disk in Pickle format
 graph.save_pkl('graph.pkl')
 graph = AssociativeGraph.load_pkl('graph.pkl')
+```
+
+## Time Decay
+
+Weights can be decayed by using `graph.decay(x)` method
+
+```python
+from grass import AssociativeGraph
+
+graph = AssociativeGraph(edges=[
+    ('A', 'B', 0.5),
+    ('A', 'C', 0.1),
+], bidirectional=False)
+
+# decay all values by 50%
+# A-B is now 0.25, A-C is now 0.05
+graph.decay(0.5)
+
+# A-C is now 0.3
+graph.set_weight('A', 'C', 0.3)
+
+# Prints [('C', 0.3), ('B', 0.25)]
+print(graph.lookup('A'))
 ```
